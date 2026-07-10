@@ -92,6 +92,34 @@ if [ "$add" != "0" ] || [ "$del" != "0" ]; then
   diff_part=$(printf "\033[32m+%s\033[0m/\033[31m-%s\033[0m" "$add" "$del")
 fi
 
+# --- Claude Code version + update check ---
+# "latest" is fetched from the npm registry in the BACKGROUND at most once every 6h
+# and cached to a file. Rendering only ever reads the cache, so the panel never blocks
+# on the network. Shows dim "vX" when current, yellow "vX↑Y" when an update is available.
+cc_ver=$(echo "$input" | jq -r '.version // empty')
+ver_part=""
+if [ -n "$cc_ver" ]; then
+  cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/claude-statusline"
+  cache_file="$cache_dir/latest-version"
+  if command -v curl >/dev/null 2>&1; then
+    nows=$(date +%s)
+    mtime=$(stat -c %Y "$cache_file" 2>/dev/null || stat -f %m "$cache_file" 2>/dev/null || echo 0)
+    if [ ! -s "$cache_file" ] || [ $((nows - mtime)) -gt 21600 ]; then
+      mkdir -p "$cache_dir"
+      ( curl -fsSL --max-time 4 https://registry.npmjs.org/@anthropic-ai/claude-code/latest \
+          | jq -r '.version // empty' > "$cache_file.tmp" 2>/dev/null \
+          && mv "$cache_file.tmp" "$cache_file" ) >/dev/null 2>&1 &
+    fi
+  fi
+  latest=""; [ -s "$cache_file" ] && latest=$(cat "$cache_file" 2>/dev/null)
+  if [ -n "$latest" ] && [ "$latest" != "$cc_ver" ] \
+     && [ "$(printf '%s\n%s\n' "$cc_ver" "$latest" | sort -V 2>/dev/null | tail -1)" = "$latest" ]; then
+    ver_part=$(printf "\033[33mv%s↑%s\033[0m" "$cc_ver" "$latest")   # update available
+  else
+    ver_part=$(printf "\033[2mv%s\033[0m" "$cc_ver")                 # up to date
+  fi
+fi
+
 # --- Git branch ---
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // empty')
 [ -z "$cwd" ] && cwd="$PWD"
@@ -106,4 +134,5 @@ folder=$(basename "$cwd")
 # --- Assemble ---
 out=$(printf "%b │ %s │ %b │ %s" "$ctx_part" "$rl_parts" "$model_short" "$cost_part")
 [ -n "$diff_part" ] && out=$(printf "%s │ %b" "$out" "$diff_part")
+[ -n "$ver_part" ] && out=$(printf "%s │ %b" "$out" "$ver_part")
 printf "%b │ \033[36m%s\033[0m:\033[1m%s\033[0m\n" "$out" "$branch" "$folder"
