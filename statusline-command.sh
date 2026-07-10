@@ -78,21 +78,28 @@ if [ "$add" != "0" ] || [ "$del" != "0" ]; then
 fi
 
 # --- Claude Code update check ---
-# "latest" is fetched from the npm registry in the BACKGROUND at most once every 6h
-# and cached to a file. Rendering only ever reads the cache, so the panel never blocks
-# on the network. The segment appears ONLY when a newer version is available (yellow "vX↑Y").
+# Compares the running version against the newest on the user's release channel
+# (autoUpdatesChannel in settings; "stable" by default) via the same source the native
+# installer uses — https://downloads.claude.ai/claude-code-releases/<channel>. NOTE: npm's
+# "latest" tracks the `latest` channel, so a stable user must NOT be compared against it.
+# The lookup runs in the BACKGROUND at most once every 6h and is cached, so rendering never
+# blocks on the network. The segment appears ONLY when a newer version exists (yellow "vX↑Y").
 cc_ver=$(echo "$input" | jq -r '.version // empty')
 ver_part=""
 if [ -n "$cc_ver" ]; then
+  conf_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+  channel=$(jq -r '.autoUpdatesChannel // "stable"' "$conf_dir/settings.json" 2>/dev/null)
+  case "$channel" in ""|null) channel="stable";; esac
   cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/claude-statusline"
-  cache_file="$cache_dir/latest-version"
+  cache_file="$cache_dir/latest-$channel"
   if command -v curl >/dev/null 2>&1; then
     nows=$(date +%s)
     mtime=$(stat -c %Y "$cache_file" 2>/dev/null || stat -f %m "$cache_file" 2>/dev/null || echo 0)
     if [ ! -s "$cache_file" ] || [ $((nows - mtime)) -gt 21600 ]; then
       mkdir -p "$cache_dir"
-      ( curl -fsSL --max-time 4 https://registry.npmjs.org/@anthropic-ai/claude-code/latest \
-          | jq -r '.version // empty' > "$cache_file.tmp" 2>/dev/null \
+      # channel file is a bare version string; reject non-version content (HTML error pages)
+      ( curl -fsSL --max-time 4 "https://downloads.claude.ai/claude-code-releases/$channel" \
+          | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?' > "$cache_file.tmp" 2>/dev/null \
           && mv "$cache_file.tmp" "$cache_file" ) >/dev/null 2>&1 &
     fi
   fi
