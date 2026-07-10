@@ -2,6 +2,8 @@
 
 A richer status line for [Claude Code](https://claude.com/claude-code) — shows what the built-in bar leaves out.
 
+![statusline panel](panel.svg)
+
 ```
 ctx:41k/1000k(4%) │ 5h:13% 7d:2% │ Opus 4.8 ·xhigh │ cost:$0.41 │ +12/-3 │ main:agents
 ```
@@ -49,3 +51,7 @@ Then add to `~/.claude/settings.json`:
 - `git` — optional, for the branch segment
 
 The panel re-renders every turn, so changes to the script take effect with no restart.
+
+## License
+
+[MIT](LICENSE)
