@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Claude Code statusLine script
-# Shows: context (tokens + %), rate limits, model, cost, git branch, cwd
+# Shows: context (tokens + %), rate limits, model+effort, lines changed,
+#        Claude Code update indicator, git branch, cwd
 
 input=$(cat)
 
@@ -68,22 +69,6 @@ fi
 effort=$(echo "$input" | jq -r '.effort.level // empty')
 [ -n "$effort" ] && model_short="${model_short} \033[2m·${effort}\033[0m"
 
-# --- Cost (comes directly in the status payload now) ---
-cost_usd=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
-if [ -z "$cost_usd" ]; then
-  # Fallback: sum costUSD fields from the transcript (older Claude Code layout)
-  transcript=$(echo "$input" | jq -r '.transcript_path // empty')
-  if [ -n "$transcript" ] && [ -f "$transcript" ]; then
-    cost_usd=$(grep -o '"costUSD":[0-9.]*' "$transcript" 2>/dev/null \
-      | awk -F: '{s+=$2} END {if (s>0) printf "%.6f", s}')
-  fi
-fi
-if [ -n "$cost_usd" ] && [ "$(echo "$cost_usd > 0" | bc -l 2>/dev/null)" = "1" ]; then
-  cost_part=$(printf 'cost:$%.2f' "$cost_usd")
-else
-  cost_part="cost:--"
-fi
-
 # --- Lines changed this session ---
 add=$(echo "$input" | jq -r '.cost.total_lines_added // 0')
 del=$(echo "$input" | jq -r '.cost.total_lines_removed // 0')
@@ -92,10 +77,10 @@ if [ "$add" != "0" ] || [ "$del" != "0" ]; then
   diff_part=$(printf "\033[32m+%s\033[0m/\033[31m-%s\033[0m" "$add" "$del")
 fi
 
-# --- Claude Code version + update check ---
+# --- Claude Code update check ---
 # "latest" is fetched from the npm registry in the BACKGROUND at most once every 6h
 # and cached to a file. Rendering only ever reads the cache, so the panel never blocks
-# on the network. Shows dim "vX" when current, yellow "vX↑Y" when an update is available.
+# on the network. The segment appears ONLY when a newer version is available (yellow "vX↑Y").
 cc_ver=$(echo "$input" | jq -r '.version // empty')
 ver_part=""
 if [ -n "$cc_ver" ]; then
@@ -114,9 +99,7 @@ if [ -n "$cc_ver" ]; then
   latest=""; [ -s "$cache_file" ] && latest=$(cat "$cache_file" 2>/dev/null)
   if [ -n "$latest" ] && [ "$latest" != "$cc_ver" ] \
      && [ "$(printf '%s\n%s\n' "$cc_ver" "$latest" | sort -V 2>/dev/null | tail -1)" = "$latest" ]; then
-    ver_part=$(printf "\033[33mv%s↑%s\033[0m" "$cc_ver" "$latest")   # update available
-  else
-    ver_part=$(printf "\033[2mv%s\033[0m" "$cc_ver")                 # up to date
+    ver_part=$(printf "\033[33mv%s↑%s\033[0m" "$cc_ver" "$latest")   # shown only when an update is available
   fi
 fi
 
@@ -132,7 +115,7 @@ branch=$(git -C "$cwd" --no-optional-locks symbolic-ref --short HEAD 2>/dev/null
 folder=$(basename "$cwd")
 
 # --- Assemble ---
-out=$(printf "%b │ %s │ %b │ %s" "$ctx_part" "$rl_parts" "$model_short" "$cost_part")
+out=$(printf "%b │ %s │ %b" "$ctx_part" "$rl_parts" "$model_short")
 [ -n "$diff_part" ] && out=$(printf "%s │ %b" "$out" "$diff_part")
 [ -n "$ver_part" ] && out=$(printf "%s │ %b" "$out" "$ver_part")
 printf "%b │ \033[36m%s\033[0m:\033[1m%s\033[0m\n" "$out" "$branch" "$folder"
