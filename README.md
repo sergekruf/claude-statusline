@@ -1,5 +1,9 @@
 # Claude Code statusline
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Works with Claude Code](https://img.shields.io/badge/Claude%20Code-statusLine-cc785c?logo=claude&logoColor=white)](https://claude.com/claude-code)
+![Shell](https://img.shields.io/badge/shell-bash-4EAA25?logo=gnubash&logoColor=white)
+
 A richer status line for [Claude Code](https://claude.com/claude-code) — shows what the built-in bar leaves out.
 
 ![statusline panel](panel.svg)
