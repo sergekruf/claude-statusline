@@ -20,7 +20,7 @@ ctx:41k/1000k(4%) │ 5h:13% 7d:2% │ Opus 4.8 ·xhigh │ +12/-3 │ v2.1.197�
 | `5h:13% 7d:2%` | Rate-limit usage for the 5-hour and 7-day windows | `rate_limits.five_hour` / `.seven_day` |
 | `Opus 4.8 ·xhigh` | Model family + version, and the reasoning effort level | `model.id`, `effort.level` |
 | `+12/-3` | Lines added / removed this session | `cost.total_lines_added` / `.total_lines_removed` |
-| `v2.1.197↑2.1.206` | Claude Code update indicator — **shown only when** a newer version is on npm (yellow, `<current>↑<latest>`). Hidden when up to date. | `version` + npm registry |
+| `v2.1.197↑2.1.206` | Claude Code update indicator — **shown only when** a newer version exists on your release channel (yellow, `<current>↑<latest>`). Hidden when up to date. | `version` + release channel |
 | `main:agents` | git branch : working-directory name | `git` + `workspace.current_dir` |
 
 > Note: `context_window.total_input_tokens` is the real context fill. `current_usage.input_tokens` is only the *marginal* input of the last request (the rest sits in cache) — using it makes the token count read `0k`, which is the bug this script exists to avoid.
@@ -58,9 +58,14 @@ The panel re-renders every turn, so changes to the script take effect with no re
 
 ### Update check
 
-The version segment compares your Claude Code version against the latest on the npm
-registry. The lookup runs **in the background at most once every 6 hours** and is cached to
-`${XDG_CACHE_HOME:-~/.cache}/claude-statusline/latest-version` — rendering only ever reads the
+The version segment compares your running version against the newest on **your release
+channel** — `autoUpdatesChannel` from `settings.json`, defaulting to `stable`. It queries the
+same source the native installer uses (`https://downloads.claude.ai/claude-code-releases/<channel>`),
+so a `stable` install is never nagged about a `latest`-only release. (npm's `latest` tag tracks
+the `latest` channel, which is why this does **not** use npm.)
+
+The lookup runs **in the background at most once every 6 hours** and is cached to
+`${XDG_CACHE_HOME:-~/.cache}/claude-statusline/latest-<channel>` — rendering only ever reads the
 cache, so the panel never blocks on the network.
 
 ## License
