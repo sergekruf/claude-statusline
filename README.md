@@ -9,7 +9,7 @@ A richer status line for [Claude Code](https://claude.com/claude-code) — shows
 ![statusline panel](panel.svg)
 
 ```
-ctx:41k/1000k(4%) │ 5h:13% 7d:2% │ Opus 4.8 ·xhigh │ cost:$0.41 │ +12/-3 │ main:agents
+ctx:41k/1000k(4%) │ 5h:13% 7d:2% │ Opus 4.8 ·xhigh │ cost:$0.41 │ +12/-3 │ v2.1.197↑2.1.206 │ main:agents
 ```
 
 ## Segments
@@ -21,6 +21,7 @@ ctx:41k/1000k(4%) │ 5h:13% 7d:2% │ Opus 4.8 ·xhigh │ cost:$0.41 │ +12/-
 | `Opus 4.8 ·xhigh` | Model family + version, and the reasoning effort level | `model.id`, `effort.level` |
 | `cost:$0.41` | Session cost so far (USD) | `cost.total_cost_usd` |
 | `+12/-3` | Lines added / removed this session | `cost.total_lines_added` / `.total_lines_removed` |
+| `v2.1.197↑2.1.206` | Claude Code version. Dim when current; turns yellow with `↑<latest>` when a newer version is on npm. | `version` + npm registry |
 | `main:agents` | git branch : working-directory name | `git` + `workspace.current_dir` |
 
 > Note: `context_window.total_input_tokens` is the real context fill. `current_usage.input_tokens` is only the *marginal* input of the last request (the rest sits in cache) — using it makes the token count read `0k`, which is the bug this script exists to avoid.
@@ -53,8 +54,16 @@ Then add to `~/.claude/settings.json`:
 - `jq` — required (parses the status JSON)
 - `bc` — optional, for the cost segment
 - `git` — optional, for the branch segment
+- `curl` — optional, for the Claude Code update check
 
 The panel re-renders every turn, so changes to the script take effect with no restart.
+
+### Update check
+
+The version segment compares your Claude Code version against the latest on the npm
+registry. The lookup runs **in the background at most once every 6 hours** and is cached to
+`${XDG_CACHE_HOME:-~/.cache}/claude-statusline/latest-version` — rendering only ever reads the
+cache, so the panel never blocks on the network.
 
 ## License
 
