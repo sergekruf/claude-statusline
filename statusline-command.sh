@@ -45,16 +45,20 @@ if [ -n "$week_pct" ]; then
 fi
 [ -z "$rl_parts" ] && rl_parts="quota:--"
 
-# --- Model short name (family + version, e.g. "Opus 4.8") ---
+# --- Model short name (family + version, e.g. "Opus 4.8", "Sonnet 5") ---
 model_id=$(echo "$input" | jq -r '.model.id // empty')
-# version digits like "4-8" → "4.8" (first match, ignoring a trailing date like -20251001)
-ver=$(echo "$model_id" | grep -oP '\d+-\d+' | head -1 | tr '-' '.')
+# Take the digits right after the family name: "opus-4-8[1m]"→4.8, "sonnet-5"→5,
+# "haiku-4-5-20251001"→4.5 (trailing date/suffix ignored).
+ver=$(echo "$model_id" | sed -E 's/.*(opus|sonnet|haiku|fable)-?//I' \
+      | grep -oE '^[0-9]+(-[0-9]+)?' | tr '-' '.')
 if echo "$model_id" | grep -qi "opus"; then
   model_short="Opus${ver:+ $ver}"
 elif echo "$model_id" | grep -qi "sonnet"; then
   model_short="Sonnet${ver:+ $ver}"
 elif echo "$model_id" | grep -qi "haiku"; then
   model_short="Haiku${ver:+ $ver}"
+elif echo "$model_id" | grep -qi "fable"; then
+  model_short="Fable${ver:+ $ver}"
 else
   model_short=$(echo "$input" | jq -r '.model.display_name // "?"')
 fi
