@@ -53,12 +53,12 @@ week_reset=$(echo "$input" | jq -r '.rate_limits.seven_day.resets_at // empty')
 rl_parts=""
 if [ -n "$five_pct" ]; then
   rl_parts="5h:$(printf '%.0f' "$five_pct")%"
-  eta=$(_eta "$five_reset"); [ -n "$eta" ] && rl_parts="${rl_parts}↻${eta}"
+  eta=$(_eta "$five_reset"); [ -n "$eta" ] && rl_parts="${rl_parts} (${eta})"
 fi
 if [ -n "$week_pct" ]; then
   [ -n "$rl_parts" ] && rl_parts="$rl_parts "
   rl_parts="${rl_parts}7d:$(printf '%.0f' "$week_pct")%"
-  eta=$(_eta "$week_reset"); [ -n "$eta" ] && rl_parts="${rl_parts}↻${eta}"
+  eta=$(_eta "$week_reset"); [ -n "$eta" ] && rl_parts="${rl_parts} (${eta})"
 fi
 [ -z "$rl_parts" ] && rl_parts="quota:--"
 
