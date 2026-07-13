@@ -9,7 +9,7 @@ A richer status line for [Claude Code](https://claude.com/claude-code) — shows
 ![statusline panel](panel.svg)
 
 ```
-ctx:41k/1000k(4%) │ 5h:13% 7d:2% │ Opus 4.8 ·xhigh │ +12/-3 │ v2.1.197↑2.1.206 │ main:agents
+ctx:41k/1000k(4%) │ 5h:13%↻2h10m 7d:2%↻5d7h │ Opus 4.8 ·xhigh │ +12/-3 │ v2.1.197↑2.1.206 │ main:agents
 ```
 
 ## Segments
@@ -17,7 +17,7 @@ ctx:41k/1000k(4%) │ 5h:13% 7d:2% │ Opus 4.8 ·xhigh │ +12/-3 │ v2.1.197�
 | Segment | Meaning | Source field |
 |---|---|---|
 | `ctx:41k/1000k(4%)` | Context fill: tokens in context / window size / percent. Turns yellow ≥60%, red ≥80%. | `context_window.total_input_tokens`, `.context_window_size`, `.used_percentage` |
-| `5h:13% 7d:2%` | Rate-limit usage for the 5-hour and 7-day windows | `rate_limits.five_hour` / `.seven_day` |
+| `5h:13%↻2h10m 7d:2%↻5d7h` | Rate-limit usage for the 5-hour and 7-day windows, with `↻` time until each window resets | `rate_limits.*.used_percentage` / `.resets_at` |
 | `Opus 4.8 ·xhigh` | Model family + version, and the reasoning effort level | `model.id`, `effort.level` |
 | `+12/-3` | Lines added / removed this session | `cost.total_lines_added` / `.total_lines_removed` |
 | `v2.1.197↑2.1.206` | Claude Code update indicator — **shown only when** a newer version exists on your release channel (yellow, `<current>↑<latest>`). Hidden when up to date. | `version` + release channel |
