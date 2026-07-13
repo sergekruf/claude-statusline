@@ -33,16 +33,32 @@ else
   ctx_part="ctx:--"
 fi
 
-# --- Rate limits ---
+# --- Rate limits (usage % + time until the window resets) ---
+# compact time from now until a unix timestamp: 45m / 2h10m / 5d7h / now
+_eta() {
+  local target="$1" now s d h m
+  { [ -z "$target" ] || [ "$target" = "null" ]; } && return
+  now=$(date +%s)
+  s=$((target - now))
+  [ "$s" -le 0 ] && { printf 'now'; return; }
+  d=$((s / 86400)); h=$(((s % 86400) / 3600)); m=$(((s % 3600) / 60))
+  if   [ "$d" -gt 0 ]; then printf '%dd%dh' "$d" "$h"
+  elif [ "$h" -gt 0 ]; then printf '%dh%dm' "$h" "$m"
+  else printf '%dm' "$m"; fi
+}
 five_pct=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
+five_reset=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
 week_pct=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty')
+week_reset=$(echo "$input" | jq -r '.rate_limits.seven_day.resets_at // empty')
 rl_parts=""
 if [ -n "$five_pct" ]; then
   rl_parts="5h:$(printf '%.0f' "$five_pct")%"
+  eta=$(_eta "$five_reset"); [ -n "$eta" ] && rl_parts="${rl_parts}↻${eta}"
 fi
 if [ -n "$week_pct" ]; then
   [ -n "$rl_parts" ] && rl_parts="$rl_parts "
   rl_parts="${rl_parts}7d:$(printf '%.0f' "$week_pct")%"
+  eta=$(_eta "$week_reset"); [ -n "$eta" ] && rl_parts="${rl_parts}↻${eta}"
 fi
 [ -z "$rl_parts" ] && rl_parts="quota:--"
 
